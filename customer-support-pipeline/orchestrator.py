@@ -3,7 +3,7 @@ Orchestrator module - handles Gmail, OpenAI, Notion, and Slack integrations
 """
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from openai import OpenAI
 from google.auth.transport.requests import Request
@@ -23,6 +23,28 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 NOTION_TOKEN = os.getenv("NOTION_API_KEY") or os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+
+# Create credentials.json from environment variable if needed (for Render deployment)
+if not os.path.exists('credentials.json'):
+    creds_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
+    if creds_json:
+        try:
+            with open('credentials.json', 'w') as f:
+                f.write(creds_json)
+            print("✅ Created credentials.json from environment variable")
+        except Exception as e:
+            print(f"⚠️ Could not create credentials.json: {e}")
+
+# Create token.json from environment variable if needed (for Render deployment)
+if not os.path.exists('token.json'):
+    token_json = os.getenv('GOOGLE_TOKEN_JSON')
+    if token_json:
+        try:
+            with open('token.json', 'w') as f:
+                f.write(token_json)
+            print("✅ Created token.json from environment variable")
+        except Exception as e:
+            print(f"⚠️ Could not create token.json: {e}")
 
 # Initialize clients
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
@@ -68,7 +90,7 @@ def authenticate_gmail():
 def fetch_customer_emails(service, hours_back=24):
     """Fetch customer support emails from the last N hours"""
     try:
-        time_ago = datetime.now(timezone.utc) - timedelta(hours=hours_back)
+        time_ago = datetime.utcnow() - timedelta(hours=hours_back)
         query = f'after:{int(time_ago.timestamp())}'
         
         results = service.users().messages().list(
@@ -334,7 +356,7 @@ def send_slack_digest(summary):
 
 # ============ MAIN WORKFLOW ============
 
-def run_full_pipeline(hours_back=168):
+def run_full_pipeline(hours_back=24):
     """Run the complete pipeline"""
     print("\n" + "="*60)
     print("🚀 STARTING AI MAINTENANCE PIPELINE")
